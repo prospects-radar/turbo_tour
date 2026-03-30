@@ -24,6 +24,7 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: .ruby-version
+          budler: latest
           bundler-cache: true
 
       - name: Ensure release tag matches gem version
