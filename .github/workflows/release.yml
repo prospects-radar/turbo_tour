@@ -64,5 +64,11 @@ jobs:
           bundler: latest
           bundler-cache: true
 
+      - name: Build gem for publishing
+        run: gem build turbo_tour.gemspec --output turbo_tour.gem
+
+      - name: Configure RubyGems credentials
+        uses: rubygems/configure-rubygems0credentials@v1
+
       - name: Publish gem to RubyGems
         uses: rubygems/release-gem@v1
