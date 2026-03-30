@@ -1,0 +1,17 @@
+journeys:
+  dashboard_intro:
+    - name: create_project
+      target: create-project
+      title: "Create your first project"
+      body: "Click here to create your first project."
+
+    - name: dashboard_metrics
+      target: dashboard-metrics
+      title: "Track performance"
+      body: "This area shows your analytics metrics."
+
+  invite_team:
+    - name: invite_button
+      target: invite-button
+      title: "Invite your team"
+      body: "Bring collaborators into your workspace."

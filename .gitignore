@@ -1,0 +1,8 @@
+/pkg
+/*.gem
+/Gemfile.lock
+/.bundle
+/vendor/bundle
+/.yardoc
+/.byebug_history
+/test/tmp

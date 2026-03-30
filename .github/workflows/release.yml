@@ -1,0 +1,66 @@
+name: Release Gem
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Ensure release tag matches gem version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          GEM_VERSION="$(ruby -e 'require_relative "lib/turbo_tour/version"; print TurboTour::VERSION')"
+
+          if [ "$RELEASE_TAG" != "$GEM_VERSION" ] && [ "$RELEASE_TAG" != "v$GEM_VERSION" ]; then
+            echo "Release tag $RELEASE_TAG does not match gem version $GEM_VERSION."
+            exit 1
+          fi
+
+      - name: Run test suite
+        run: bundle exec rake test
+
+      - name: Build gem
+        run: gem build turbo_tour.gemspec
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Publish gem to RubyGems
+        uses: rubygems/release-gem@v1
