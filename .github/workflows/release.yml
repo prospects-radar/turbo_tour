@@ -4,12 +4,15 @@ on:
   release:
     types: [published]
 
+env:
+  CI_RUBY_VERSION: "3.3"
+
 concurrency:
   group: release-${{ github.event.release.tag_name }}
   cancel-in-progress: false
 
 jobs:
-  verify:
+  publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -23,8 +26,8 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ${{ env.CI_RUBY_VERSION}}
-          budler: latest
+          ruby-version: ${{ env.CI_RUBY_VERSION }}
+          bundler: latest
           bundler-cache: true
 
       - name: Ensure release tag matches gem version
@@ -41,34 +44,17 @@ jobs:
       - name: Run test suite
         run: bundle exec rake test
 
-      - name: Build gem
-        run: gem build turbo_tour.gemspec
-
-  publish:
-    needs: verify
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v5
-        with:
-          persist-credentials: false
-
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: ${{ env.CI_RUBY_VERSION}}
-          bundler: latest
-          bundler-cache: true
-
       - name: Build gem for publishing
         run: gem build turbo_tour.gemspec --output turbo_tour.gem
 
       - name: Configure RubyGems credentials
-        uses: rubygems/configure-rubygems-credentials@v1
+        env:
+          RUBYGEMS_AUTH_TOKEN: ${{ secrets.RUBYGEMS_AUTH_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.gem"
+          chmod 0700 "$HOME/.gem"
+          printf -- "---\n:rubygems_api_key: %s\n" "$RUBYGEMS_AUTH_TOKEN" > "$HOME/.gem/credentials"
+          chmod 0600 "$HOME/.gem/credentials"
 
       - name: Publish gem to RubyGems
-        uses: rubygems/release-gem@v1
+        run: gem push turbo_tour.gem
