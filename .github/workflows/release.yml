@@ -23,7 +23,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: .ruby-version
+          ruby-version: ${{ env.CI_RUBY_VERSION}}
           budler: latest
           bundler-cache: true
 
@@ -60,7 +60,8 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: .ruby-version
+          ruby-version: ${{ env.CI_RUBY_VERSION}}
+          bundler: latest
           bundler-cache: true
 
       - name: Publish gem to RubyGems
