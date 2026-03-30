@@ -14,8 +14,10 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
+      id-token: write
 
     steps:
       - name: Check out repository
@@ -27,7 +29,6 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ env.CI_RUBY_VERSION }}
-          bundler: latest
           bundler-cache: true
 
       - name: Ensure release tag matches gem version
@@ -44,17 +45,8 @@ jobs:
       - name: Run test suite
         run: bundle exec rake test
 
-      - name: Build gem for publishing
-        run: gem build turbo_tour.gemspec --output turbo_tour.gem
+      - name: Build gem
+        run: gem build turbo_tour.gemspec
 
-      - name: Configure RubyGems credentials
-        env:
-          RUBYGEMS_AUTH_TOKEN: ${{ secrets.RUBYGEMS_AUTH_TOKEN }}
-        run: |
-          mkdir -p "$HOME/.gem"
-          chmod 0700 "$HOME/.gem"
-          printf -- "---\n:rubygems_api_key: %s\n" "$RUBYGEMS_AUTH_TOKEN" > "$HOME/.gem/credentials"
-          chmod 0600 "$HOME/.gem/credentials"
-
-      - name: Publish gem to RubyGems
-        run: gem push turbo_tour.gem
+      - name: Publish to RubyGems with Trusted Publishing
+        uses: rubygems/release-gem@v1
