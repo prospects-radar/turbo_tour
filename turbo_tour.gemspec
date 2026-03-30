@@ -19,7 +19,6 @@ Gem::Specification.new do |spec|
   spec.metadata["homepage_uri"] = homepage if homepage
   spec.metadata["source_code_uri"] = source_code_uri if source_code_uri
   spec.metadata["changelog_uri"] = changelog_uri if changelog_uri
-  spec.metadata["rubygems_mfa_required"] = "true"
 
   spec.files = Dir.glob("{app,config,lib}/**/*", File::FNM_DOTMATCH)
                   .reject { |path| File.directory?(path) }
