@@ -4,6 +4,12 @@ const DEFAULT_CLASSES = ""
 const DEFAULT_KEY = "turbo_tour_session_id"
 const GAP = 12
 const PAD = 16
+const SIZE_PRESETS = {
+  small:  { width: "280px", maxHeight: "200px" },
+  medium: { width: "340px", maxHeight: "320px" },
+  large:  { width: "440px", maxHeight: "420px" },
+  wide:   { width: "560px", maxHeight: "420px" }
+}
 const HOOK_NAMES = {
   "turbo-tour:start": "onStart",
   "turbo-tour:next": "onNext",
@@ -108,6 +114,7 @@ export default class extends Controller {
     this.skippableByJourney = JSON.parse(this.element.dataset.turboTourSkippableMap || "{}")
     this.skippable = this.skippableDefault
     this.translations = JSON.parse(this.element.dataset.turboTourTranslations || "{}")
+    this.tooltipSize = this.element.dataset.turboTourTooltipSize || null
     this.template = this.element.querySelector("template[data-turbo-tour-template]")
     this.onKeydown = this.keydown.bind(this)
     this.onPosition = this.position.bind(this)
@@ -281,6 +288,17 @@ export default class extends Controller {
       this.skipButton.disabled = !this.skippable
       this.skipButton.setAttribute("aria-hidden", String(!this.skippable))
       this.skipButton.setAttribute("aria-disabled", String(!this.skippable))
+    }
+
+    const preset = SIZE_PRESETS[this.step.size || this.tooltipSize]
+    if (preset) {
+      this.panel.style.width = preset.width
+      this.panel.style.maxHeight = preset.maxHeight
+      if (this.body) this.body.style.overflowY = "auto"
+    } else {
+      this.panel.style.width = ""
+      this.panel.style.maxHeight = ""
+      if (this.body) this.body.style.overflowY = ""
     }
   }
 

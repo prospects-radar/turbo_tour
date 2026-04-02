@@ -115,6 +115,32 @@ class TurboTourHelperTest < ActiveSupport::TestCase
     assert_includes html, "data-turbo-tour-translations"
   end
 
+  test "includes tooltip size as data attribute when provided" do
+    html = with_sample_journeys do
+      view_context.turbo_tour("dashboard_intro", tooltip_size: :wide)
+    end
+
+    assert_includes html, 'data-turbo-tour-tooltip-size="wide"'
+  end
+
+  test "uses global configuration for tooltip size when not overridden" do
+    TurboTour.configuration.tooltip_size = :large
+
+    html = with_sample_journeys do
+      view_context.turbo_tour("dashboard_intro")
+    end
+
+    assert_includes html, 'data-turbo-tour-tooltip-size="large"'
+  end
+
+  test "omits tooltip size data attribute when nil" do
+    html = with_sample_journeys do
+      view_context.turbo_tour("dashboard_intro")
+    end
+
+    refute_includes html, "data-turbo-tour-tooltip-size"
+  end
+
   private
 
   def sample_journeys
