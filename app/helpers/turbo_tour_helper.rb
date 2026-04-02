@@ -81,11 +81,11 @@ module TurboTourHelper
 
   def turbo_tour_ui_translations(locale)
     {
-      "prev" => I18n.t("turbo_tour.prev", locale: locale, default: "Prev"),
-      "next" => I18n.t("turbo_tour.next", locale: locale, default: "Next"),
-      "finish" => I18n.t("turbo_tour.finish", locale: locale, default: "Finish"),
-      "skip" => I18n.t("turbo_tour.skip", locale: locale, default: "Skip"),
-      "progress" => I18n.t("turbo_tour.progress", locale: locale, default: "Step %{current} of %{total}")
+      "prev" => I18n.t("turbo_tour.prev", locale: locale),
+      "next" => I18n.t("turbo_tour.next", locale: locale),
+      "finish" => I18n.t("turbo_tour.finish", locale: locale),
+      "skip" => I18n.t("turbo_tour.skip", locale: locale),
+      "progress" => I18n.t("turbo_tour.progress", locale: locale)
     }
   end
 

@@ -260,8 +260,8 @@ export default class extends Controller {
     if (this.title) this.title.textContent = this.step.title
     if (this.body) this.body.textContent = this.step.body
     if (this.progress) {
-      const progressTemplate = this.translations.progress || "Step %{current} of %{total}"
-      this.progress.textContent = progressTemplate.replace("%{current}", current).replace("%{total}", this.steps.length)
+      const progressTemplate = this.translations.progress
+      if (progressTemplate) this.progress.textContent = progressTemplate.replace("%{current}", current).replace("%{total}", this.steps.length)
     }
 
     if (this.prevButton) {
@@ -271,9 +271,9 @@ export default class extends Controller {
     }
 
     if (this.nextButton) {
-      const finishLabel = this.translations.finish || "Finish"
-      const nextLabel = this.translations.next || "Next"
-      this.nextButton.textContent = this.index === this.steps.length - 1 ? finishLabel : nextLabel
+      const finishLabel = this.translations.finish
+      const nextLabel = this.translations.next
+      if (finishLabel && nextLabel) this.nextButton.textContent = this.index === this.steps.length - 1 ? finishLabel : nextLabel
     }
 
     if (this.skipButton) {
