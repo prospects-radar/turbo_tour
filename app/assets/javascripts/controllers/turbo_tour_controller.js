@@ -13,6 +13,49 @@ const HOOK_NAMES = {
 }
 
 const escape = (value) => window.CSS?.escape ? window.CSS.escape(value) : String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+
+const escapeHTML = (str) => str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+
+const renderMarkdown = (text) => {
+  if (!text) return ""
+
+  const html = escapeHTML(text)
+  const blocks = html.split(/\n{2,}/)
+
+  return blocks.map((block) => {
+    const trimmed = block.trim()
+    if (!trimmed) return ""
+
+    // Unordered list
+    if (/^[-*]\s/.test(trimmed)) {
+      const items = trimmed.split(/\n/).filter(Boolean).map((line) =>
+        `<li>${inlineMarkdown(line.replace(/^[-*]\s+/, ""))}</li>`
+      ).join("")
+      return `<ul>${items}</ul>`
+    }
+
+    // Ordered list
+    if (/^\d+\.\s/.test(trimmed)) {
+      const items = trimmed.split(/\n/).filter(Boolean).map((line) =>
+        `<li>${inlineMarkdown(line.replace(/^\d+\.\s+/, ""))}</li>`
+      ).join("")
+      return `<ol>${items}</ol>`
+    }
+
+    return `<p>${inlineMarkdown(trimmed.replace(/\n/g, "<br>"))}</p>`
+  }).join("")
+}
+
+const inlineMarkdown = (text) => {
+  return text
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    .replace(/_([^_]+)_/g, "<em>$1</em>")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+}
+
 const targetFor = (step) => document.querySelector(`[data-tour-step="${escape(step.target)}"]`)
 const sessionId = () => window.crypto?.randomUUID ? window.crypto.randomUUID() : `tt-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 const normalizeHookArgs = (journeyName, handler) => typeof journeyName === "function"
@@ -258,7 +301,7 @@ export default class extends Controller {
   render() {
     const current = this.index + 1
     if (this.title) this.title.textContent = this.step.title
-    if (this.body) this.body.textContent = this.step.body
+    if (this.body) this.body.innerHTML = renderMarkdown(this.step.body)
     if (this.progress) {
       const progressTemplate = this.translations.progress
       if (progressTemplate) this.progress.textContent = progressTemplate.replace("%{current}", current).replace("%{total}", this.steps.length)
