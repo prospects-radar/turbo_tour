@@ -28,6 +28,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "rails", ">= 7.0", "< 9.0"
   spec.add_dependency "stimulus-rails", ">= 1.3", "< 2.0"
+  spec.add_dependency "commonmarker", ">= 2.0", "< 3.0"
 
   spec.add_development_dependency "bundler", ">= 2.4", "< 5.0"
   spec.add_development_dependency "rake", ">= 13.0", "< 14.0"

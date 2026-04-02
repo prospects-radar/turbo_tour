@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "active_support/core_ext/hash/keys"
+require "commonmarker"
 
 module TurboTourHelper
   def turbo_tour(*journey_names, auto_start: true, partial: TurboTour.configuration.tooltip_partial,
@@ -67,7 +68,7 @@ module TurboTourHelper
       steps.map do |step|
         step.merge(
           "title" => resolve_localizable(step["title"], locale_key),
-          "body" => resolve_localizable(step["body"], locale_key)
+          "body" => render_turbo_tour_markdown(resolve_localizable(step["body"], locale_key))
         )
       end
     end
@@ -108,5 +109,15 @@ module TurboTourHelper
 
   def boolean_option(value)
     value != false && !value.nil?
+  end
+
+  def render_turbo_tour_markdown(text)
+    return "" if text.blank?
+
+    Commonmarker.to_html(text, options: {
+      parse: { smart: true },
+      render: { unsafe: false, hardbreaks: true },
+      extension: { strikethrough: true, autolink: true, table: true, tasklist: true }
+    }).strip
   end
 end

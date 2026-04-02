@@ -75,6 +75,16 @@ class TurboTourHelperTest < ActiveSupport::TestCase
     assert_includes html, "&quot;progress&quot;"
   end
 
+  test "renders markdown in step body content" do
+    html = with_markdown_journeys do
+      view_context.turbo_tour("markdown_demo")
+    end
+
+    assert_includes html, "&lt;strong&gt;bold&lt;/strong&gt;"
+    assert_includes html, "&lt;em&gt;italic&lt;/em&gt;"
+    assert_includes html, "&lt;code&gt;code&lt;/code&gt;"
+  end
+
   test "resolves locale-keyed journey content for the current locale" do
     with_i18n_available_locales([:en, :es]) do
       html = with_multilang_journeys do
@@ -147,6 +157,29 @@ class TurboTourHelperTest < ActiveSupport::TestCase
               en: Let us show you around.
               es: Permítanos mostrarle el lugar.
     YAML
+  end
+
+  def markdown_journeys
+    <<~YAML
+      journeys:
+        markdown_demo:
+          - name: step_one
+            target: step-one
+            title: Markdown step
+            body: "This has **bold**, *italic*, and `code` formatting."
+    YAML
+  end
+
+  def with_markdown_journeys
+    with_temporary_directory do |root|
+      write_file(root.join("config/turbo_tours/markdown.yml"), markdown_journeys)
+      TurboTour.instance_variable_set(
+        :@journey_loader,
+        TurboTour::JourneyLoader.new(configuration: TurboTour.configuration, root: root)
+      )
+
+      yield
+    end
   end
 
   def with_sample_journeys
