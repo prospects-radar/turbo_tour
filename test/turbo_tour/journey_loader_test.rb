@@ -107,55 +107,185 @@ class TurboTourJourneyLoaderTest < ActiveSupport::TestCase
     end
   end
 
-  test "supports locale-keyed hashes for title and body" do
-    with_temporary_directory do |root|
-      write_file(root.join("config/turbo_tours/multilang.yml"), <<~YAML)
-        journeys:
-          welcome:
-            - name: greeting
-              target: greeting-banner
-              title:
-                en: Welcome
-                es: Bienvenido
-              body:
-                en: Let us show you around.
-                es: Permítanos mostrarle el lugar.
-      YAML
+  test "loads locale-keyed content from locale subdirectories" do
+    with_i18n_available_locales([:en, :es]) do
+      with_temporary_directory do |root|
+        write_file(root.join("config/turbo_tours/en/welcome.yml"), <<~YAML)
+          journeys:
+            welcome:
+              - name: greeting
+                target: greeting-banner
+                title: Welcome
+                body: Let us show you around.
+        YAML
 
-      loader = TurboTour::JourneyLoader.new(configuration: TurboTour.configuration, root: root)
-      step = loader.fetch(:welcome).first
+        write_file(root.join("config/turbo_tours/es/welcome.yml"), <<~YAML)
+          journeys:
+            welcome:
+              - name: greeting
+                target: greeting-banner
+                title: Bienvenido
+                body: Permítanos mostrarle el lugar.
+        YAML
 
-      assert_equal({ "en" => "Welcome", "es" => "Bienvenido" }, step["title"])
-      assert_equal({ "en" => "Let us show you around.", "es" => "Permítanos mostrarle el lugar." }, step["body"])
+        loader = TurboTour::JourneyLoader.new(configuration: TurboTour.configuration, root: root)
+        step = loader.fetch(:welcome).first
+
+        assert_equal({ "en" => "Welcome", "es" => "Bienvenido" }, step["title"])
+        assert_equal({ "en" => "Let us show you around.", "es" => "Permítanos mostrarle el lugar." }, step["body"])
+      end
     end
   end
 
-  test "supports mixed plain strings and locale-keyed hashes in the same journey" do
-    with_temporary_directory do |root|
-      write_file(root.join("config/turbo_tours/mixed.yml"), <<~YAML)
-        journeys:
-          onboarding:
-            - name: step_one
-              target: step-one
-              title:
-                en: Hello
-                fr: Bonjour
-              body: This body is not localized.
-            - name: step_two
-              target: step-two
-              title: Plain title
-              body:
-                en: English body
-                fr: Corps français
-      YAML
+  test "root-level and locale-subdir journeys coexist" do
+    with_i18n_available_locales([:en, :es]) do
+      with_temporary_directory do |root|
+        write_file(root.join("config/turbo_tours/dashboard.yml"), <<~YAML)
+          journeys:
+            dashboard_intro:
+              - name: create_project
+                target: create-project
+                title: Create your first project
+                body: Click here to begin.
+        YAML
 
-      loader = TurboTour::JourneyLoader.new(configuration: TurboTour.configuration, root: root)
-      steps = loader.fetch(:onboarding)
+        write_file(root.join("config/turbo_tours/en/welcome.yml"), <<~YAML)
+          journeys:
+            welcome:
+              - name: greeting
+                target: greeting-banner
+                title: Welcome
+                body: Let us show you around.
+        YAML
 
-      assert_equal({ "en" => "Hello", "fr" => "Bonjour" }, steps[0]["title"])
-      assert_equal "This body is not localized.", steps[0]["body"]
-      assert_equal "Plain title", steps[1]["title"]
-      assert_equal({ "en" => "English body", "fr" => "Corps français" }, steps[1]["body"])
+        write_file(root.join("config/turbo_tours/es/welcome.yml"), <<~YAML)
+          journeys:
+            welcome:
+              - name: greeting
+                target: greeting-banner
+                title: Bienvenido
+                body: Permítanos mostrarle el lugar.
+        YAML
+
+        loader = TurboTour::JourneyLoader.new(configuration: TurboTour.configuration, root: root)
+
+        assert_equal "Create your first project", loader.fetch(:dashboard_intro).first["title"]
+        assert_equal({ "en" => "Welcome", "es" => "Bienvenido" }, loader.fetch(:welcome).first["title"])
+      end
+    end
+  end
+
+  test "raises error for duplicate journey within the same locale subdir" do
+    with_i18n_available_locales([:en]) do
+      with_temporary_directory do |root|
+        write_file(root.join("config/turbo_tours/en/one.yml"), <<~YAML)
+          journeys:
+            welcome:
+              - name: greeting
+                target: greeting-banner
+                title: Welcome
+                body: Hello.
+        YAML
+
+        write_file(root.join("config/turbo_tours/en/two.yml"), <<~YAML)
+          journeys:
+            welcome:
+              - name: greeting
+                target: greeting-banner
+                title: Hi there
+                body: Hey.
+        YAML
+
+        loader = TurboTour::JourneyLoader.new(configuration: TurboTour.configuration, root: root)
+        error = assert_raises(TurboTour::JourneyLoader::DuplicateJourneyError) { loader.all }
+
+        assert_match(/welcome/, error.message)
+        assert_match(/locale/, error.message)
+      end
+    end
+  end
+
+  test "raises error when step counts differ across locales" do
+    with_i18n_available_locales([:en, :es]) do
+      with_temporary_directory do |root|
+        write_file(root.join("config/turbo_tours/en/welcome.yml"), <<~YAML)
+          journeys:
+            welcome:
+              - name: step_one
+                target: step-one
+                title: Hello
+                body: Body one.
+              - name: step_two
+                target: step-two
+                title: Next
+                body: Body two.
+        YAML
+
+        write_file(root.join("config/turbo_tours/es/welcome.yml"), <<~YAML)
+          journeys:
+            welcome:
+              - name: step_one
+                target: step-one
+                title: Hola
+                body: Cuerpo uno.
+        YAML
+
+        loader = TurboTour::JourneyLoader.new(configuration: TurboTour.configuration, root: root)
+        error = assert_raises(TurboTour::JourneyLoader::InvalidJourneyError) { loader.all }
+
+        assert_match(/welcome/, error.message)
+        assert_match(/steps/, error.message)
+      end
+    end
+  end
+
+  test "raises error when journey is defined in both root and locale directories" do
+    with_i18n_available_locales([:en]) do
+      with_temporary_directory do |root|
+        write_file(root.join("config/turbo_tours/welcome.yml"), <<~YAML)
+          journeys:
+            welcome:
+              - name: greeting
+                target: greeting-banner
+                title: Welcome
+                body: Hello.
+        YAML
+
+        write_file(root.join("config/turbo_tours/en/welcome.yml"), <<~YAML)
+          journeys:
+            welcome:
+              - name: greeting
+                target: greeting-banner
+                title: Welcome
+                body: Hello.
+        YAML
+
+        loader = TurboTour::JourneyLoader.new(configuration: TurboTour.configuration, root: root)
+        error = assert_raises(TurboTour::JourneyLoader::DuplicateJourneyError) { loader.all }
+
+        assert_match(/welcome/, error.message)
+        assert_match(/root and locale/, error.message)
+      end
+    end
+  end
+
+  test "non-locale subdirectory is treated as root-level file" do
+    with_i18n_available_locales([:en]) do
+      with_temporary_directory do |root|
+        write_file(root.join("config/turbo_tours/admin/dashboard.yml"), <<~YAML)
+          journeys:
+            admin_dashboard:
+              - name: overview
+                target: overview-panel
+                title: Admin overview
+                body: See all the stats.
+        YAML
+
+        loader = TurboTour::JourneyLoader.new(configuration: TurboTour.configuration, root: root)
+        step = loader.fetch(:admin_dashboard).first
+
+        assert_equal "Admin overview", step["title"]
+      end
     end
   end
 end

@@ -144,18 +144,25 @@ class TurboTourHelperTest < ActiveSupport::TestCase
     context
   end
 
-  def multilang_journeys
+  def multilang_journeys_en
     <<~YAML
       journeys:
         welcome:
           - name: greeting
             target: greeting-banner
-            title:
-              en: Welcome
-              es: Bienvenido
-            body:
-              en: Let us show you around.
-              es: Permítanos mostrarle el lugar.
+            title: Welcome
+            body: Let us show you around.
+    YAML
+  end
+
+  def multilang_journeys_es
+    <<~YAML
+      journeys:
+        welcome:
+          - name: greeting
+            target: greeting-banner
+            title: Bienvenido
+            body: Permítanos mostrarle el lugar.
     YAML
   end
 
@@ -196,7 +203,8 @@ class TurboTourHelperTest < ActiveSupport::TestCase
 
   def with_multilang_journeys
     with_temporary_directory do |root|
-      write_file(root.join("config/turbo_tours/multilang.yml"), multilang_journeys)
+      write_file(root.join("config/turbo_tours/en/welcome.yml"), multilang_journeys_en)
+      write_file(root.join("config/turbo_tours/es/welcome.yml"), multilang_journeys_es)
       TurboTour.instance_variable_set(
         :@journey_loader,
         TurboTour::JourneyLoader.new(configuration: TurboTour.configuration, root: root)

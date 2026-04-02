@@ -25,16 +25,28 @@ journeys:
 
         Use the `invite` button to send an email invitation.
 
-# Multi-language example (uncomment to use):
+# Multi-language support:
 #
-#   welcome_tour:
-#     - name: greeting
-#       target: greeting-banner
-#       title:
-#         en: "Welcome!"
-#         es: "¡Bienvenido!"
-#         fr: "Bienvenue !"
-#       body:
-#         en: "Let us show you around."
-#         es: "Permítanos mostrarle el lugar."
-#         fr: "Laissez-nous vous faire visiter."
+# Place each language in its own subdirectory:
+#
+#   config/turbo_tours/en/welcome.yml
+#   config/turbo_tours/es/welcome.yml
+#   config/turbo_tours/fr/welcome.yml
+#
+# Each file uses plain strings for title and body:
+#
+#   # config/turbo_tours/en/welcome.yml
+#   journeys:
+#     welcome_tour:
+#       - name: greeting
+#         target: greeting-banner
+#         title: "Welcome!"
+#         body: "Let us show you around."
+#
+#   # config/turbo_tours/es/welcome.yml
+#   journeys:
+#     welcome_tour:
+#       - name: greeting
+#         target: greeting-banner
+#         title: "¡Bienvenido!"
+#         body: "Permítanos mostrarle el lugar."
