@@ -11,7 +11,6 @@ module TurboTour
     class InvalidJourneyError < Error; end
 
     REQUIRED_STEP_KEYS = %w[name target title body].freeze
-    LOCALIZABLE_KEYS = %w[title body].freeze
 
     def initialize(configuration:, root: nil)
       @configuration = configuration
@@ -39,15 +38,41 @@ module TurboTour
     attr_reader :configuration, :root
 
     def load_journeys
-      journey_files.each_with_object({}) do |file_path, journeys|
-        merge_file!(journeys, file_path)
+      journeys = {}
+      locale_groups = Hash.new { |h, k| h[k] = {} }
+
+      journey_files.each do |file_path|
+        locale = detect_locale_from_path(file_path)
+
+        if locale
+          collect_locale_file!(locale_groups, file_path, locale)
+        else
+          merge_file!(journeys, file_path)
+        end
       end
+
+      merge_locale_groups!(journeys, locale_groups)
+      journeys
     end
 
     def journey_files
       configuration.journey_globs.flat_map do |pattern|
         Dir.glob(root.join(pattern).to_s)
       end.sort.uniq
+    end
+
+    def detect_locale_from_path(file_path)
+      available = I18n.available_locales.map(&:to_s)
+      relative = Pathname.new(file_path).relative_path_from(root)
+      parts = relative.each_filename.to_a
+
+      # Look for a locale segment among the path components (excluding the filename).
+      # The first directory component that matches an available locale wins.
+      parts[0...-1].each do |segment|
+        return segment if available.include?(segment)
+      end
+
+      nil
     end
 
     def merge_file!(journeys, file_path)
@@ -66,6 +91,59 @@ module TurboTour
         end
 
         journeys[normalized_name] = normalize_steps(steps, journey_name: normalized_name, file_path: file_path)
+      end
+    end
+
+    def collect_locale_file!(locale_groups, file_path, locale)
+      data = YAML.safe_load(File.read(file_path), aliases: false) || {}
+      file_journeys = data.fetch("journeys", {})
+
+      unless file_journeys.is_a?(Hash)
+        raise InvalidJourneyError, "#{file_path} must define a top-level journeys hash"
+      end
+
+      file_journeys.each do |journey_name, steps|
+        normalized_name = journey_name.to_s
+
+        if locale_groups[normalized_name].key?(locale)
+          raise DuplicateJourneyError,
+                "Journey #{normalized_name.inspect} is defined more than once for locale #{locale.inspect}"
+        end
+
+        locale_groups[normalized_name][locale] =
+          normalize_steps(steps, journey_name: normalized_name, file_path: file_path)
+      end
+    end
+
+    def merge_locale_groups!(journeys, locale_groups)
+      locale_groups.each do |journey_name, locales_hash|
+        if journeys.key?(journey_name)
+          raise DuplicateJourneyError,
+                "Journey #{journey_name.inspect} is defined in both root and locale directories"
+        end
+
+        reference_locale = locales_hash.keys.sort.first
+        reference_steps = locales_hash[reference_locale]
+
+        locales_hash.each do |locale, steps|
+          next if steps.length == reference_steps.length
+
+          raise InvalidJourneyError,
+                "Journey #{journey_name.inspect} has #{steps.length} steps in locale #{locale.inspect} " \
+                "but #{reference_steps.length} in #{reference_locale.inspect}"
+        end
+
+        journeys[journey_name] = reference_steps.each_with_index.map do |ref_step, idx|
+          title_hash = {}
+          body_hash = {}
+
+          locales_hash.sort.each do |locale, steps|
+            title_hash[locale] = steps[idx]["title"]
+            body_hash[locale] = steps[idx]["body"]
+          end
+
+          ref_step.merge("title" => title_hash, "body" => body_hash)
+        end
       end
     end
 
@@ -101,8 +179,6 @@ module TurboTour
     end
 
     def normalize_localizable(value)
-      return value.transform_keys(&:to_s).transform_values(&:to_s) if value.is_a?(Hash)
-
       value.to_s
     end
 
