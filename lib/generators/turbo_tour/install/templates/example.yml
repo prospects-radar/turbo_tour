@@ -8,6 +8,7 @@ journeys:
     - name: dashboard_metrics
       target: dashboard-metrics
       title: "Track performance"
+      # size: wide          # optional: small | medium | large | wide
       body: |
         This area shows your **analytics metrics**.
 

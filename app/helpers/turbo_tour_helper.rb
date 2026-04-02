@@ -8,6 +8,7 @@ module TurboTourHelper
                  highlight_classes: TurboTour.configuration.highlight_classes,
                  session_storage_key: TurboTour.configuration.session_storage_key,
                  skippable: TurboTour.configuration.skippable,
+                 tooltip_size: TurboTour.configuration.tooltip_size,
                  locale: nil, **html_options, &block)
     names = Array(journey_names).flatten.compact.map(&:to_s)
     raise ArgumentError, "Pass at least one journey name to turbo_tour" if names.empty?
@@ -29,6 +30,7 @@ module TurboTourHelper
     skippable_default, skippable_map = normalize_skippable(names, skippable)
     data_attributes["turbo-tour-skippable-default"] = skippable_default
     data_attributes["turbo-tour-skippable-map"] = JSON.generate(skippable_map) if skippable_map.any?
+    data_attributes["turbo-tour-tooltip-size"] = tooltip_size.to_s if tooltip_size
 
     html_options[:data] = data_attributes
 

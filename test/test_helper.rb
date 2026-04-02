@@ -65,6 +65,7 @@ module TurboTourTestSupport
     configuration.session_storage_key = defaults.session_storage_key
     configuration.skippable = defaults.skippable
     configuration.tooltip_partial = defaults.tooltip_partial
+    configuration.tooltip_size = defaults.tooltip_size
     configuration.analytics_enabled = defaults.analytics_enabled
     configuration.analytics_endpoint_path = defaults.analytics_endpoint_path
     configuration.current_user_resolver = defaults.current_user_resolver

@@ -269,6 +269,25 @@ class TurboTourJourneyLoaderTest < ActiveSupport::TestCase
     end
   end
 
+  test "preserves optional size key on steps" do
+    with_temporary_directory do |root|
+      write_file(root.join("config/turbo_tours/sized.yml"), <<~YAML)
+        journeys:
+          sized_tour:
+            - name: big_step
+              target: big-panel
+              title: A wide step
+              body: This step is wider.
+              size: wide
+      YAML
+
+      loader = TurboTour::JourneyLoader.new(configuration: TurboTour.configuration, root: root)
+      step = loader.fetch(:sized_tour).first
+
+      assert_equal "wide", step["size"]
+    end
+  end
+
   test "non-locale subdirectory is treated as root-level file" do
     with_i18n_available_locales([:en]) do
       with_temporary_directory do |root|
