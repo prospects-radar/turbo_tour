@@ -18,6 +18,7 @@ const HOOK_NAMES = {
   "turbo-tour:skip-tour": "onSkip"
 }
 
+const SUPPORTED_ACTIONS = new Set(["click", "focus"])
 const escape = (value) => window.CSS?.escape ? window.CSS.escape(value) : String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"')
 const targetFor = (step) => document.querySelector(`[data-tour-step="${escape(step.target)}"]`)
 const sessionId = () => window.crypto?.randomUUID ? window.crypto.randomUUID() : `tt-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
@@ -213,6 +214,27 @@ export default class extends Controller {
     this.end({ eventName: "turbo-tour:skip-tour", reason: "skipped" })
   }
 
+  performAction(step) {
+    if (!step.action) return
+    if (!SUPPORTED_ACTIONS.has(step.action)) {
+      console.warn(`[TurboTour] Unknown action "${step.action}" on step "${step.name}"`)
+      return
+    }
+
+    const selector = step.action_target
+    const element = selector
+      ? document.querySelector(selector)
+      : targetFor(step)
+
+    if (!element) {
+      console.warn(`[TurboTour] Action target not found for step "${step.name}"`)
+      return
+    }
+
+    if (step.action === "click") element.click()
+    if (step.action === "focus") element.focus()
+  }
+
   show(index, direction = 1, emitStart = false) {
     let pointer = index
     let step
@@ -220,6 +242,7 @@ export default class extends Controller {
 
     while (pointer >= 0 && pointer < this.steps.length) {
       step = this.steps[pointer]
+      this.performAction(step)
       target = targetFor(step)
       if (target) break
       pointer += direction

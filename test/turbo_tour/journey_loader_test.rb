@@ -269,6 +269,46 @@ class TurboTourJourneyLoaderTest < ActiveSupport::TestCase
     end
   end
 
+  test "preserves optional action and action_target keys on steps" do
+    with_temporary_directory do |root|
+      write_file(root.join("config/turbo_tours/actions.yml"), <<~YAML)
+        journeys:
+          tab_tour:
+            - name: billing_tab
+              target: billing-panel
+              title: Billing settings
+              body: Manage your billing here.
+              action: click
+              action_target: "[data-tab='billing']"
+      YAML
+
+      loader = TurboTour::JourneyLoader.new(configuration: TurboTour.configuration, root: root)
+      step = loader.fetch(:tab_tour).first
+
+      assert_equal "click", step["action"]
+      assert_equal "[data-tab='billing']", step["action_target"]
+    end
+  end
+
+  test "action key is optional and absent steps have no action" do
+    with_temporary_directory do |root|
+      write_file(root.join("config/turbo_tours/no_action.yml"), <<~YAML)
+        journeys:
+          plain_tour:
+            - name: intro
+              target: intro-panel
+              title: Welcome
+              body: Just a normal step.
+      YAML
+
+      loader = TurboTour::JourneyLoader.new(configuration: TurboTour.configuration, root: root)
+      step = loader.fetch(:plain_tour).first
+
+      assert_nil step["action"]
+      assert_nil step["action_target"]
+    end
+  end
+
   test "preserves optional size key on steps" do
     with_temporary_directory do |root|
       write_file(root.join("config/turbo_tours/sized.yml"), <<~YAML)

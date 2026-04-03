@@ -177,6 +177,8 @@ module TurboTour
         "body" => normalize_localizable(normalized["body"])
       ).tap do |step|
         step["size"] = step["size"].to_s if step.key?("size")
+        step["action"] = step["action"].to_s if step.key?("action")
+        step["action_target"] = step["action_target"].to_s if step.key?("action_target")
       end
     end
 
