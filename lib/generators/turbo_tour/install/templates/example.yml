@@ -17,6 +17,13 @@ journeys:
         - Conversion rates
         - User engagement
 
+    - name: billing_settings
+      target: billing-panel
+      title: "Billing settings"
+      body: "Manage your **billing** and payment methods here."
+      action: click                          # perform this action before showing the step
+      action_target: "[data-tab='billing']"  # CSS selector for the element to act on
+
   invite_team:
     - name: invite_button
       target: invite-button
