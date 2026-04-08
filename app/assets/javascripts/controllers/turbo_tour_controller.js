@@ -243,25 +243,45 @@ export default class extends Controller {
     while (pointer >= 0 && pointer < this.steps.length) {
       step = this.steps[pointer]
       this.performAction(step)
+      if (!step.target) break
       target = targetFor(step)
       if (target) break
       pointer += direction
     }
 
-    if (!target) return false
+    if (pointer < 0 || pointer >= this.steps.length) return false
 
-    this.clearHighlight()
-    this.index = pointer
-    this.step = step
-    this.target = target
-    this.ensurePanel()
-    this.target.scrollIntoView({ block: "center", inline: "nearest" })
-    this.target.classList.add(...this.highlightClasses)
-    this.target.setAttribute("data-turbo-tour-active", "true")
-    this.render()
-    this.position()
-    this.panel.focus()
-    if (emitStart) this.emit("turbo-tour:start")
+    const applyStep = () => {
+      // Re-fetch target so we get fresh dimensions after any DOM mutations
+      // triggered by performAction (e.g. a tab switch revealing hidden content).
+      const resolvedTarget = step.target ? (targetFor(step) || target) : null
+
+      this.clearHighlight()
+      this.index = pointer
+      this.step = step
+      this.target = resolvedTarget
+      this.ensurePanel()
+      if (this.target) {
+        this.target.scrollIntoView({ block: "nearest", inline: "nearest" })
+        this.target.classList.add(...this.highlightClasses)
+        this.target.setAttribute("data-turbo-tour-active", "true")
+      }
+      this.render()
+      this.position()
+      this.panel.focus()
+      if (emitStart) this.emit("turbo-tour:start")
+    }
+
+    // When an action was performed (e.g. clicking a tab to reveal content),
+    // defer the visual update to the next two animation frames so the browser
+    // has time to apply CSS class changes, recalculate layout, and complete
+    // any CSS transitions before we measure element dimensions.
+    if (step.action) {
+      requestAnimationFrame(() => requestAnimationFrame(applyStep))
+    } else {
+      applyStep()
+    }
+
     return true
   }
 
@@ -326,16 +346,46 @@ export default class extends Controller {
   }
 
   position() {
-    if (!this.panel || !this.target) return
+    if (!this.panel) return
+
+    if (!this.target) {
+      const panel = this.panel.getBoundingClientRect()
+      this.panel.style.left = `${Math.round((window.innerWidth - panel.width) / 2)}px`
+      this.panel.style.top = `${Math.round((window.innerHeight - panel.height) / 2)}px`
+      return
+    }
 
     const anchor = this.target.getBoundingClientRect()
     const panel = this.panel.getBoundingClientRect()
+
+    // Horizontal: centre over anchor, clamped within viewport
     const idealLeft = anchor.left + (anchor.width / 2) - (panel.width / 2)
     const maxLeft = window.innerWidth - panel.width - PAD
     const left = Math.min(Math.max(PAD, idealLeft), Math.max(PAD, maxLeft))
+
+    // Vertical: prefer below anchor, fall back to above, then clamp so panel
+    // is always fully visible even when the anchor fills the viewport.
+    const anchorMid = anchor.top + anchor.height / 2
     const below = anchor.bottom + GAP
     const above = anchor.top - panel.height - GAP
-    const top = below + panel.height <= window.innerHeight - PAD ? below : Math.max(PAD, above)
+    let top
+
+    if (below + panel.height <= window.innerHeight - PAD) {
+      // Fits below
+      top = below
+    } else if (above >= PAD) {
+      // Fits above
+      top = above
+    } else if (anchorMid > window.innerHeight / 2) {
+      // Anchor is in the lower half — place panel near the top
+      top = PAD
+    } else {
+      // Anchor is in the upper half — place panel near the bottom
+      top = window.innerHeight - panel.height - PAD
+    }
+
+    // Final clamp so the panel never overflows the viewport
+    top = Math.max(PAD, Math.min(top, window.innerHeight - panel.height - PAD))
 
     this.panel.style.left = `${Math.round(left)}px`
     this.panel.style.top = `${Math.round(top)}px`
