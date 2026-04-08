@@ -27,9 +27,19 @@ module TurboTour
       end
     end
 
-    initializer "turbo_tour.reload_journeys" do
-      ActiveSupport::Reloader.to_prepare do
+    initializer "turbo_tour.reload_journeys" do |app|
+      journey_paths = TurboTour.configuration.journey_globs.flat_map do |glob|
+        Dir[app.root.join(glob)]
+      end
+
+      reloader = app.config.file_watcher.new(journey_paths, app.root.join("config/turbo_tours").to_s => %w[yml yaml]) do
         TurboTour.reload!
+      end
+
+      app.reloaders << reloader
+
+      ActiveSupport::Reloader.to_prepare do
+        reloader.execute_if_updated
       end
     end
   end

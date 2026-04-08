@@ -10,7 +10,7 @@ module TurboTour
     class DuplicateJourneyError < Error; end
     class InvalidJourneyError < Error; end
 
-    REQUIRED_STEP_KEYS = %w[name target title body].freeze
+    REQUIRED_STEP_KEYS = %w[name title body].freeze
 
     def initialize(configuration:, root: nil)
       @configuration = configuration
@@ -170,12 +170,14 @@ module TurboTour
               "#{file_path} journey #{journey_name.inspect} step #{index + 1} is missing #{missing_keys.join(', ')}"
       end
 
-      normalized.merge(
+      result = normalized.merge(
         "name" => normalized["name"].to_s,
-        "target" => normalized["target"].to_s,
         "title" => normalize_localizable(normalized["title"]),
         "body" => normalize_localizable(normalized["body"])
-      ).tap do |step|
+      )
+      result["target"] = normalized["target"].to_s if normalized["target"].present?
+
+      result.tap do |step|
         step["size"] = step["size"].to_s if step.key?("size")
         step["action"] = step["action"].to_s if step.key?("action")
         step["action_target"] = step["action_target"].to_s if step.key?("action_target")

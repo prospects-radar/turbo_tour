@@ -328,6 +328,36 @@ class TurboTourJourneyLoaderTest < ActiveSupport::TestCase
     end
   end
 
+  test "steps without a target are allowed and omit the target key" do
+    with_temporary_directory do |root|
+      write_file(root.join("config/turbo_tours/centered.yml"), <<~YAML)
+        journeys:
+          welcome_tour:
+            - name: welcome
+              title: Welcome!
+              body: Let us show you around.
+              size: wide
+            - name: sidebar
+              target: sidebar-nav
+              title: Sidebar
+              body: Navigate here.
+      YAML
+
+      loader = TurboTour::JourneyLoader.new(configuration: TurboTour.configuration, root: root)
+      steps = loader.fetch(:welcome_tour)
+
+      assert_equal 2, steps.length
+
+      welcome = steps.first
+      assert_equal "welcome", welcome["name"]
+      assert_equal "Welcome!", welcome["title"]
+      assert_nil welcome["target"], "Targetless step must not include a target key"
+
+      sidebar = steps.last
+      assert_equal "sidebar-nav", sidebar["target"]
+    end
+  end
+
   test "non-locale subdirectory is treated as root-level file" do
     with_i18n_available_locales([:en]) do
       with_temporary_directory do |root|
