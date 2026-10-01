@@ -39,7 +39,10 @@ module TurboTourHelper
         [
           (capture(&block) if block_given?),
           tag.template(data: { turbo_tour_template: true }) do
-            render partial: partial, locals: {
+            # The tooltip lives inside a <template> tag and is always HTML.
+            # Pin the format so lookup succeeds even when the surrounding
+            # request is rendered as :turbo_stream (or any non-HTML format).
+            render partial: partial, formats: [ :html ], locals: {
               journey_name: default_journey,
               journey_names: names,
               locale: resolved_locale
